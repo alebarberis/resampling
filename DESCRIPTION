@@ -32,5 +32,6 @@ Suggests:
 VignetteBuilder: knitr
 Imports: 
     utils
-URL: https://github.com/alebarberis/resampling
+URL: https://github.com/alebarberis/resampling,
+    https://alebarberis.github.io/resampling/
 BugReports: https://github.com/alebarberis/resampling/issues

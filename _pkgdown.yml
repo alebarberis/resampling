@@ -1,7 +1,6 @@
-url: ~
+url: https://alebarberis.github.io/resampling/
 template:
   bootstrap: 5
-
 articles:
 - title: Sampling
   desc: Articles used to show the different sampling techniques available in `resampling`
@@ -15,12 +14,10 @@ articles:
   contents:
   - sampling/resampling_wr
   - sampling/resampling_wor
-
 reference:
 - title: Main Resampling Function
   desc: This function provides easy access and uniform syntax to the resampling methodologies
-  contents:
-  - resample
+  contents: resample
 - title: Resampling Class
   desc: Methods to handle objects of class `resampling`
   contents:
@@ -83,3 +80,4 @@ reference:
   - listResamplingFunctionNames
   - getSamplingFunction
   - getResamplingFunction
+
