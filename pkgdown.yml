@@ -1,0 +1,14 @@
+pandoc: 2.19.2
+pkgdown: 2.0.7
+pkgdown_sha: ~
+articles:
+  resampling: resampling.html
+  resampling_wor: sampling/resampling_wor.html
+  resampling_wr: sampling/resampling_wr.html
+  sampling_wor: sampling/sampling_wor.html
+  sampling_wr: sampling/sampling_wr.html
+last_built: 2023-01-30T20:45Z
+urls:
+  reference: https://alebarberis.github.io/resampling/reference
+  article: https://alebarberis.github.io/resampling/articles
+
