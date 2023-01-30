@@ -1,0 +1,380 @@
+---
+title: "Sampling Without Replacement"
+bibliography: references.bib  
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    # toc_float: true
+vignette: >
+  %\VignetteIndexEntry{Sampling Without Replacement}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 3
+)
+```
+
+## Introduction
+In statistics, *sampling* is the selection of a subset of elements from a 
+*population*, here defined as a complete set of subjects of interest. 
+
+Since often it is too expensive or logistically impossible to collect data for 
+every case in a population, *sampling* is instead used as a cheap and fast
+methodology to estimate its characteristics.
+
+Different sampling schemes exist, but they can be grouped into 2 main categories,
+i.e. **sampling with** or **without replacement**: 
+
+* *sampling with replacement* implies each element in the population may appear 
+multiple times in one sample
+* in *sampling without replacement*, each member of the population can be chosen
+only once in one sample
+
+In this article, we show how to draw **samples without replacement** 
+from a population by using the functions implemented in `resampling`.
+
+For further information on how to draw *repeated samples without replacement*,
+see [Resampling without replacement](resampling_wor.html).
+
+## Setup
+
+### Loading
+Firstly, we need to load the `resampling` R package:
+
+```{r setup}
+library(resampling)
+```
+
+### Seed
+Then, we set a seed for the random number generation (RNG). In fact, different R 
+sessions have different seeds created from current time and process ID by 
+default, and consequently different simulation results. 
+By fixing a seed we ensure we will be able to reproduce the results of this 
+vignette. We can specify a seed by calling `?set.seed`.
+
+
+```{r set_seed}
+#Set a seed for RNG
+set.seed(
+  #A seed
+  seed = 5381L,                   #a randomly chosen integer value
+  #The kind of RNG to use
+  kind = "Mersenne-Twister",      #we make explicit the current R default value
+  #The kind of Normal generation
+  normal.kind = "Inversion"       #we make explicit the current R default value
+)
+```
+
+
+## Sampling Without Replacement
+As previously wrote, **sampling without replacement** implies that elements of a 
+population can be chosen only once in one sample. 
+There are different techniques of sampling without replacement, including:
+
+* simple random sampling
+* random sampling with unequal probabilities
+* stratified sampling
+* balanced sampling (a special case of stratified sampling)
+* permutation sampling
+* k-fold sampling
+* leave-p-out sampling
+
+The available methods can be listed through the `?listAvailableSamplingMethods` 
+function call, setting the input argument to `'rswor'`. 
+`?listAvailableSamplingMethods` returns a table with two columns:
+
+* `id`: the id of the sampling method, to be used in the function calls
+* `name`: the name of the sampling method
+
+```{r list_sampling_methods}
+#list sampling methods
+sampling.methods = listAvailableSamplingMethods(x = 'rswor')
+
+#print in table
+knitr::kable(x = sampling.methods)
+```
+
+The name of the sampling functions can be retrieved by calling `?listSamplingFunctionNames`.
+
+```{r list_sampling_functions}
+#list sampling function names
+sampling.function.names = listSamplingFunctionNames(x = 'rswor')
+
+#print in table
+knitr::kable(x = sampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?simpleRandomSampleWithoutReplacement`.
+
+```{r function_documentation}
+#See documentation
+?simpleRandomSampleWithoutReplacement
+```
+
+From the documentation, we can see that the function accepts 2 arguments in 
+input:
+
+* `N`: the population size
+* `n`: the sample size
+
+
+### Simple Random Sampling
+**Simple random sampling** (**SRS**) is the easiest form of sampling without replacement.
+In SRS without replacement, each element of the population has the same probability 
+of being selected for the sample.
+
+```{r simple_random_sampling_wo_replacement}
+#Simple random sampling without replacement
+simpleRandomSampleWithoutReplacement(
+  N = 10,
+  n = 8
+)
+```
+
+
+
+
+### Random Sampling With Unequal Probability
+The concept of **random sampling without replacement with unequal probability** was 
+developed by Narain [@Narain1951], Horvitz and Thompson [@Horvitz1952].
+Under this sampling design, elements of the population have different 
+probabilities of being selected.
+We can use `?sampleWithoutReplacement` to draw our sample. For example, let's 
+assume our population of interest has 10 elements, and that the first 3 elements
+have an higher chance of being selected.
+
+```{r random_sampling_wo_replacement}
+#Random sampling without replacement
+sampleWithoutReplacement(
+  N = 10,
+  n = 5,
+  prob = c(rep(3,3), rep(1,7))
+)
+```
+
+
+
+### Stratified Random Sampling
+When a population can be partitioned into groups (i.e. *strata* or subpopulations)
+having certain properties in common, a **stratified sampling** approach can be used. 
+This sampling design is adopted to ensure that subgroups of the population are 
+represented in the taken sample.
+
+A stratified sample without replacement can be taken by using 
+`?stratifiedSampleWithoutReplacement` which accept a `strata` argument in input.
+
+```{r stratified_sampling_wo_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Stratified sampling without replacement
+stratifiedSampleWithoutReplacement(
+  strata = strata,
+  n = 9
+)
+```
+
+`?stratifiedSampleWithoutReplacement` implements the so-called "proportionate 
+allocation", in which the proportion of the strata in the population is 
+maintained in the samples.
+
+```{r stratified_sampling_wo_replacement_proportionate_allocation}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Stratified sampling without replacement
+s = stratifiedSampleWithoutReplacement(
+  strata = strata,
+  n = 6
+)
+
+#Check ratio in the sample
+table(strata[s])/length(strata[s])
+```
+
+
+
+### Balanced Random Sampling
+**Balanced sampling** is a special case of *stratified sampling* used to ensure that
+subgroups of the population are equally represented in the taken sample.
+
+```{r balanced_sampling_wo_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Balanced sampling without replacement
+s = balancedSampleWithoutReplacement(
+  strata = strata,
+  n = 6
+)
+
+#Check ratio in the sample
+table(strata[s])/length(strata[s])
+```
+
+
+
+### Permutation Sampling
+A **permutation sample** is a sample of the same size of the population, where the
+elements are simply rearranged in a random order.
+
+A permutation sample can be taken by using `?permutationSample`:
+
+```{r permutation_sampling}
+#Permutation sampling
+permutationSample(
+  N = 10
+)
+```
+
+
+
+### K-fold Sampling
+In **k-fold sampling**, each element of the population is randomly assigned to 1 
+of *k* folds. `resampling` provides a function to easily select a random sample
+made of elements from *k-1* folds:
+
+```{r kfolds_sampling}
+#K-1 folds sampling
+randomKm1Folds(
+  N = 10,
+  k = 3
+)
+```
+
+
+### Stratified K-fold Sampling
+In **stratified k-fold sampling**, each element in the population is assigned to 
+one of the *k* folds so that the percentage of each stratum in the population is 
+preserved in each fold.
+
+`?stratifiedKm1Folds` assigns the population to *k* stratified folds and returns
+a sample made of elements from *k-1* folds:
+
+```{r stratified_kfolds_sampling}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds and take a sample
+i = stratifiedKm1Folds(
+  strata = strata,
+  k = 3
+)
+
+#Check folds
+i
+
+#Check ratio in the folds
+table(strata[i])/length(strata[i])
+```
+
+
+
+### Balanced K-fold Sampling
+**Balanced k-fold sampling** is a special case of *stratified sampling* in which
+the population is assigned to *k* balanced folds.
+
+`?balancedKm1Folds` assigns the population to *k* balanced folds and returns
+a sample made of elements from *k-1* folds. 
+Internally, it uses `?balancedKFolds` to assign the population to *k* balanced folds:
+
+* If the population is balanced, each element in the population is assigned to one 
+of the k folds so that the percentage of each stratum is preserved in each fold
+* If the population is unbalanced and `undersample = TRUE`, the so-called
+*random undersampling* is adopted, i.e. the proportion of the strata in the
+population is adjusted by removing elements from the majority groups, so that
+each stratum is balanced
+
+
+```{r balanced_km1folds_sampling}
+#Define balanced strata
+strata = c(rep(1,6),rep(2,6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds and take a sample
+i = balancedKm1Folds(
+  strata = strata,
+  k = 3
+)
+
+#Check sample
+i
+
+#Check ratio in the sample
+table(strata[i])/length(strata[i])
+
+#Define unbalanced strata
+strata = c(rep(1,6),rep(2,12))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds and take a sample
+i = balancedKm1Folds(
+  strata = strata,
+  k = 3,
+  undersample = T
+)
+
+#Check folds
+i
+
+#Check ratio in the folds
+table(strata[i])/length(strata[i])
+```
+
+
+
+
+### Leave-p-out Sampling
+In **leave-p-out** sampling, a random sample of size `p` is taken from the 
+population and used as holdout data.
+
+`?leavePOutSample` returns a random sample obtained by removing the holdout
+sample from the population:
+
+```{r leave_p_out_sampling}
+#Take one sample leaving out p elements
+leavePOutSample(N = 5, p = 2)
+```
+
+
+
+### Leave-one-out Sampling
+The **leave-one-out** is a particular case of the *leave-p-out*, where `p = 1`.
+Particularly, a random sample of size `1` is taken from the population and used 
+as holdout data.
+
+For example, let's assume our population of interest has 5 elements. In this 
+case, a sample obtained with this sampling technique will result in 4 elements:
+
+```{r leave_one_out_sampling}
+#Take one sample leaving out 1 element
+leaveOneOutSample(N = 5)
+```
+
+
+
+
+## References
+

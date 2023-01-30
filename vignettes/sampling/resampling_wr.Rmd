@@ -1,0 +1,345 @@
+---
+title: "Resampling With Replacement"
+# bibliography: references.bib  
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    # toc_float: true
+vignette: >
+  %\VignetteIndexEntry{Resampling With Replacement}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 3
+)
+```
+
+## Introduction
+**Sampling with replacement** implies that each element in the population may appear 
+multiple times in one sample. 
+There are different techniques of sampling with replacement, including:
+
+* simple random sampling
+* random sampling with unequal probabilities
+* stratified sampling
+* balanced sampling (a special case of stratified sampling)
+
+In this article, we show how to draw **repeated samples with replacement** 
+from a population by using the functions implemented in `resampling`.
+
+For further information on the sampling techniques, see 
+[Sampling with replacement](sampling_wr.html).
+
+## Setup
+
+### Loading
+Firstly, we need to load `resampling` and other needed R packages:
+
+```{r setup, message = FALSE}
+#resampling
+library(resampling)
+
+#Packages for visualisation
+require(ComplexHeatmap, quietly = TRUE)
+require(grid, quietly = TRUE)
+require(RColorBrewer, quietly = TRUE)
+```
+
+### Seed
+Then, we set a seed for the random number generation (RNG). In fact, different R 
+sessions have different seeds created from current time and process ID by 
+default, and consequently different simulation results. 
+By fixing a seed we ensure we will be able to reproduce the results of this 
+vignette. We can specify a seed by calling `?set.seed`.
+
+
+```{r set_seed}
+#Set a seed for RNG
+set.seed(
+  #A seed
+  seed = 5381L,                   #a randomly chosen integer value
+  #The kind of RNG to use
+  kind = "Mersenne-Twister",      #we make explicit the current R default value
+  #The kind of Normal generation
+  normal.kind = "Inversion"       #we make explicit the current R default value
+)
+```
+
+
+## Resampling With Replacement
+The available methods for taking repeated samples with replacement can be listed 
+through the `?listAvailableSamplingMethods` function call, setting the input 
+argument to `'rswr'`. 
+`?listAvailableSamplingMethods` returns a table with two columns:
+
+* `id`: the id of the sampling method, to be used in the function calls
+* `name`: the name of the sampling method
+
+```{r list_sampling_methods}
+#list sampling methods
+sampling.methods = listAvailableSamplingMethods(x = 'rswr')
+
+#print in table
+knitr::kable(x = sampling.methods)
+```
+
+The name of the resampling functions can be retrieved by calling `?listResamplingFunctionNames`.
+
+```{r list_resampling_functions}
+#list resampling function names
+resampling.function.names = listResamplingFunctionNames(x = 'rswr')
+
+#print in table
+knitr::kable(x = resampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?repeatedSimpleRandomSampleWithReplacement`.
+
+```{r function_documentation}
+#See documentation
+?repeatedSimpleRandomSampleWithReplacement
+```
+
+From the documentation, we can see that the function accepts 3 arguments in 
+input:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+
+
+### Simple Random Sampling
+In resampling via **simple random sampling** (**SRS**), simple random samples 
+with replacement are repeatedly taken from the population.
+
+The function implementing this sampling scheme is 
+`?repeatedSimpleRandomSampleWithReplacement`, which accepts 3 arguments:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+
+```{r simple_random_sampling_w_replacement}
+#Simple random sampling with replacement
+repeatedSimpleRandomSampleWithReplacement(
+  k = 2,
+  N = 10,
+  n = 8
+)
+```
+
+Instead of using `?repeatedSimpleRandomSampleWithReplacement`, we can take 
+repeated samples by using the `?resample` function.
+
+```{r repeated_simple_random_sampling_w_replacement}
+#Simple random sampling with replacement
+obj = resample(
+  x = 10,
+  n = 8,
+  k = 2,
+  method = 'srswr'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+
+### Random Sampling With Unequal Probability
+We can use `?repeatedSampleWithReplacement` to draw **repeated samples without replacement with unequal probability**. 
+From the documentation, we can see that the function accepts 4 arguments in 
+input:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+* `prob`: an optional vector of probabilities for obtaining the population elements
+
+For example, let's assume our population of interest has 10 elements, and that 
+the first 3 elements have an higher chance of being selected.
+
+```{r random_sampling_w_replacement}
+#Random sampling with replacement
+repeatedSampleWithReplacement(
+  k = 2,
+  N = 10,
+  n = 5,
+  prob = c(rep(3,3), rep(1,7))
+)
+```
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'rswr'`.
+
+```{r repeated_random_sampling_w_replacement}
+#Random sampling with replacement
+obj = resample(
+  x = 10,
+  n = 5,
+  k = 2,
+  method = 'rswr',
+  prob = c(rep(3,3),rep(1,7))
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+### Stratified Random Sampling
+**Repeated stratified samples with replacement** can be taken by using 
+`?repeatedStratifiedSampleWithReplacement` which accept a `strata` argument in input.
+
+```{r stratified_sampling_w_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Stratified sampling without replacement
+repeatedStratifiedSampleWithReplacement(
+  k = 2,
+  strata = strata,
+  n = 6
+)
+```
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'stratified_rswr'`.
+
+```{r repeated_stratified_random_sampling_w_replacement}
+#Stratified sampling with replacement
+obj = resample(
+  x = strata,
+  n = 6,
+  k = 2,
+  method = 'stratified_rswr'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+### Balanced Random Sampling
+**Balanced sampling** is a special case of *stratified sampling* used to ensure that
+subgroups of the population are equally represented in the taken sample.
+
+Repeated balanced samples with replacement can be taken by using 
+`?repeatedBalancedSampleWithReplacement`:
+
+```{r balanced_sampling_w_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Balanced sampling with replacement
+s = repeatedBalancedSampleWithReplacement(
+  k = 2,
+  strata = strata,
+  n = 6
+)
+
+#Check ratio in the samples
+table(strata[s[[1]]])/length(strata[s[[1]]])
+table(strata[s[[2]]])/length(strata[s[[2]]])
+```
+
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'balanced_rswr'`.
+
+```{r repeated_balanced_random_sampling_w_replacement}
+#Balanced sampling with replacement
+obj = resample(
+  x = strata,
+  n = 6,
+  k = 2,
+  method = 'balanced_rswr'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+### Bootstrap Sampling
+We can take **repeated bootstrap samples** by using `?repeatedBootstrapSample`:
+
+```{r bootstrap_sampling}
+#Bootstrap sampling
+repeatedBootstrapSample(
+  k = 2,
+  N = 10
+)
+```
+
+
+We can also use the `?resample` function by setting `method = 'bootstrap'`.
+
+```{r repeated_bootstrap_sampling}
+#Bootstrap sampling
+obj = resample(
+  x = 10,
+  k = 2,
+  method = 'bootstrap'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+
+
+

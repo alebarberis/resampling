@@ -1,0 +1,245 @@
+---
+title: "Sampling With Replacement"
+bibliography: references.bib  
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    # toc_float: true
+vignette: >
+  %\VignetteIndexEntry{Sampling With Replacement}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 3
+)
+```
+
+## Introduction
+In statistics, *sampling* is the selection of a subset of elements from a 
+*population*, here defined as a complete set of subjects of interest. 
+
+Since often it is too expensive or logistically impossible to collect data for 
+every case in a population, *sampling* is instead used as a cheap and fast
+methodology to estimate its characteristics.
+
+Different sampling schemes exist, but they can be grouped into 2 main categories,
+i.e. **sampling with** or **without replacement**: 
+
+* *sampling with replacement* implies each element in the population may appear 
+multiple times in one sample
+* in *sampling without replacement*, each member of the population can be chosen
+only once in one sample
+
+In this article, we show how to draw **samples with replacement** 
+from a population by using the functions implemented in `resampling`.
+
+For further information on how to draw *repeated samples with replacement*,
+see [Resampling with replacement](resampling_wr.html).
+
+## Setup
+
+### Loading
+Firstly, we need to load the `resampling` R package:
+
+```{r setup}
+library(resampling)
+```
+
+### Seed
+Then, we set a seed for the random number generation (RNG). In fact, different R 
+sessions have different seeds created from current time and process ID by 
+default, and consequently different simulation results. 
+By fixing a seed we ensure we will be able to reproduce the results of this 
+vignette. We can specify a seed by calling `?set.seed`.
+
+
+```{r set_seed}
+#Set a seed for RNG
+set.seed(
+  #A seed
+  seed = 5381L,                   #a randomly chosen integer value
+  #The kind of RNG to use
+  kind = "Mersenne-Twister",      #we make explicit the current R default value
+  #The kind of Normal generation
+  normal.kind = "Inversion"       #we make explicit the current R default value
+)
+```
+
+
+## Sampling With Replacement
+As previously wrote, **sampling with replacement** implies that elements of a 
+population can be chosen multiple times in one sample. 
+There are different techniques of sampling with replacement, including:
+
+* simple random sampling
+* random sampling with unequal probabilities
+* stratified sampling
+* balanced sampling (a special case of stratified sampling)
+
+The available methods can be listed through the `?listAvailableSamplingMethods` 
+function call, setting the input argument to `'rswr'`. 
+`?listAvailableSamplingMethods` returns a table with two columns:
+
+* `id`: the id of the sampling method, to be used in the function calls
+* `name`: the name of the sampling method
+
+```{r list_sampling_methods}
+#list sampling methods
+sampling.methods = listAvailableSamplingMethods(x = 'rswr')
+
+#print in table
+knitr::kable(x = sampling.methods)
+```
+
+The name of the sampling functions can be retrieved by calling `?listSamplingFunctionNames`.
+
+```{r list_sampling_functions}
+#list sampling function names
+sampling.function.names = listSamplingFunctionNames(x = 'rswr')
+
+#print in table
+knitr::kable(x = sampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?simpleRandomSampleWithReplacement`.
+
+```{r function_documentation}
+#See documentation
+?simpleRandomSampleWithReplacement
+```
+
+From the documentation, we can see that the function accepts 2 arguments in 
+input:
+
+* `N`: the population size
+* `n`: the sample size
+
+### Simple Random Sampling
+**Simple random sampling** (**SRS**) is the easiest form of sampling with replacement.
+In SRS with replacement, each element of the population has the same probability 
+of being selected for the sample.
+
+```{r simple_random_sampling_w_replacement}
+#Simple random sampling with replacement
+simpleRandomSampleWithReplacement(
+  N = 10,
+  n = 8
+)
+```
+
+
+### Random Sampling With Unequal Probability
+The concept of **random sampling with unequal probability** was perhaps introduced by 
+Hansen and Hurwitz in the context of sampling with replacement [@Hansen1943]. 
+Under this sampling design, elements of the population have different 
+probabilities of being selected.
+We can use `?sampleWithReplacement` to draw our sample. For example, let's 
+assume our population of interest has 10 elements, and that the first 3 elements
+have an higher chance of being selected.
+
+```{r random_sampling_w_replacement}
+#Random sampling with replacement
+sampleWithReplacement(
+  N = 10,
+  n = 8,
+  prob = c(rep(3,3), rep(1,7))
+)
+```
+
+
+
+### Stratified Random Sampling
+When a population can be partitioned into groups (i.e. *strata* or subpopulations)
+having certain properties in common, a **stratified sampling** approach can be used. 
+This sampling design is adopted to ensure that subgroups of the population are 
+represented in the taken sample.
+
+A **stratified sample with replacement** can be taken by using 
+`?stratifiedSampleWithReplacement` which accept a `strata` argument in input.
+
+```{r stratified_sampling_w_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Stratified sampling with replacement
+stratifiedSampleWithReplacement(
+  strata = strata,
+  n = 9
+)
+```
+
+`?stratifiedSampleWithReplacement` implements the so-called "proportionate 
+allocation", in which the proportion of the strata in the population is 
+maintained in the samples.
+
+```{r stratified_sampling_w_replacement_proportionate_allocation}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Stratified sampling with replacement
+s = stratifiedSampleWithReplacement(
+  strata = strata,
+  n = 9
+)
+
+#Check ratio in the sample
+table(strata[s])/length(strata[s])
+```
+
+
+
+### Balanced Random Sampling
+**Balanced sampling** is a special case of *stratified sampling* used to ensure that
+subgroups of the population are equally represented in the taken sample.
+
+```{r balanced_sampling_w_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Balanced sampling with replacement
+s = balancedSampleWithReplacement(
+  strata = strata,
+  n = 8
+)
+
+#Check ratio in the sample
+table(strata[s])/length(strata[s])
+```
+
+
+
+
+### Bootstrap Sampling
+Inspired by earlier work on the jackknife, Bradley Efron published the bootstrap
+method in 1979 [@Efron1979]. An **ordinary bootstrap sample** is a special case 
+of random sample with replacement where the sample size is equivalent to the 
+population size.
+
+A bootstrap sample can be taken by using `?bootstrapSample`:
+
+```{r bootstrap_sampling}
+#Bootstrap sampling
+bootstrapSample(
+  N = 10
+)
+```
+
+
+
+## References
+

@@ -1,0 +1,635 @@
+---
+title: "Resampling Without Replacement"
+# bibliography: references.bib  
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    # toc_float: true
+vignette: >
+  %\VignetteIndexEntry{Resampling Without Replacement}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 3
+)
+```
+
+## Introduction
+**Sampling without replacement** implies that elements of a population can be 
+chosen only once in one sample. 
+There are different techniques of sampling without replacement, including:
+
+* simple random sampling
+* random sampling with unequal probabilities
+* stratified sampling
+* balanced sampling (a special case of stratified sampling)
+* permutation sampling
+* k-fold sampling
+* leave-p-out sampling
+
+In this article, we show how to draw **repeated samples without replacement** 
+from a population by using the functions implemented in `resampling`.
+
+For further information on the sampling techniques, see 
+[Sampling without replacement](sampling_wor.html).
+
+## Setup
+
+### Loading
+Firstly, we need to load `resampling` and other needed R packages:
+
+```{r setup, message = FALSE}
+#resampling
+library(resampling)
+
+#Packages for visualisation
+require(ComplexHeatmap, quietly = TRUE)
+require(grid, quietly = TRUE)
+require(RColorBrewer, quietly = TRUE)
+```
+
+### Seed
+Then, we set a seed for the random number generation (RNG). In fact, different R 
+sessions have different seeds created from current time and process ID by 
+default, and consequently different simulation results. 
+By fixing a seed we ensure we will be able to reproduce the results of this 
+vignette. We can specify a seed by calling `?set.seed`.
+
+
+```{r set_seed}
+#Set a seed for RNG
+set.seed(
+  #A seed
+  seed = 5381L,                   #a randomly chosen integer value
+  #The kind of RNG to use
+  kind = "Mersenne-Twister",      #we make explicit the current R default value
+  #The kind of Normal generation
+  normal.kind = "Inversion"       #we make explicit the current R default value
+)
+```
+
+
+## Resampling Without Replacement
+The available methods for taking repeated samples without replacement can be listed 
+through the `?listAvailableSamplingMethods` function call, setting the input 
+argument to `'rswor'`. 
+`?listAvailableSamplingMethods` returns a table with two columns:
+
+* `id`: the id of the sampling method, to be used in the function calls
+* `name`: the name of the sampling method
+
+```{r list_sampling_methods}
+#list sampling methods
+sampling.methods = listAvailableSamplingMethods(x = 'rswor')
+
+#print in table
+knitr::kable(x = sampling.methods)
+```
+
+The name of the resampling functions can be retrieved by calling `?listResamplingFunctionNames`.
+
+```{r list_resampling_functions}
+#list resampling function names
+resampling.function.names = listResamplingFunctionNames(x = 'rswor')
+
+#print in table
+knitr::kable(x = resampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?repeatedSimpleRandomSampleWithoutReplacement`.
+
+```{r function_documentation}
+#See documentation
+?repeatedSimpleRandomSampleWithoutReplacement
+```
+
+From the documentation, we can see that the function accepts 3 arguments in 
+input:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+
+
+### Simple Random Sampling
+In resampling via **simple random sampling** (**SRS**), simple random samples 
+without replacement are repeatedly taken from the population.
+
+The function implementing this sampling scheme is 
+`?repeatedSimpleRandomSampleWithoutReplacement`, which accepts 3 arguments:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+
+```{r simple_random_sampling_wo_replacement}
+#Simple random sampling without replacement
+repeatedSimpleRandomSampleWithoutReplacement(
+  k = 2,
+  N = 10,
+  n = 8
+)
+```
+
+Instead of using `?repeatedSimpleRandomSampleWithoutReplacement`, we can take 
+repeated samples by using the `?resample` function.
+
+```{r repeated_simple_random_sampling_wo_replacement}
+#Simple random sampling without replacement
+obj = resample(
+  x = 10,
+  n = 8,
+  k = 2,
+  method = 'srswor'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+
+### Random Sampling With Unequal Probability
+We can use `?repeatedSampleWithoutReplacement` to draw **repeated samples without 
+replacement with unequal probability**. 
+From the documentation, we can see that the function accepts 4 arguments in 
+input:
+
+* `k`: the number of repeated samples to generate
+* `N`: the population size
+* `n`: the sample size
+* `prob`: an optional vector of probabilities for obtaining the population elements
+
+For example, let's assume our population of interest has 10 elements, and that 
+the first 3 elements have an higher chance of being selected.
+
+```{r random_sampling_wo_replacement}
+#Random sampling without replacement
+repeatedSampleWithoutReplacement(
+  k = 2,
+  N = 10,
+  n = 5,
+  prob = c(rep(3,3), rep(1,7))
+)
+```
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'rswor'`.
+
+```{r repeated_random_sampling_wo_replacement}
+#Random sampling without replacement
+obj = resample(
+  x = 10,
+  n = 5,
+  k = 2,
+  method = 'rswor',
+  prob = c(rep(3,3),rep(1,7))
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+### Stratified Random Sampling
+**Repeated stratified samples without replacement** can be taken by using 
+`?repeatedStratifiedSampleWithoutReplacement` which accept a `strata` argument in input.
+
+```{r stratified_sampling_wo_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Stratified sampling without replacement
+repeatedStratifiedSampleWithoutReplacement(
+  k = 2,
+  strata = strata,
+  n = 6
+)
+```
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'stratified_rswor'`.
+
+```{r repeated_stratified_random_sampling_wo_replacement}
+#Stratified sampling without replacement
+obj = resample(
+  x = strata,
+  n = 6,
+  k = 2,
+  method = 'stratified_rswor'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+### Balanced Random Sampling
+**Balanced sampling** is a special case of *stratified sampling* used to ensure that
+subgroups of the population are equally represented in the taken sample.
+
+Repeated balanced samples without replacement can be taken by using 
+`?repeatedBalancedSampleWithoutReplacement`:
+
+```{r balanced_sampling_wo_replacement}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Balanced sampling without replacement
+s = repeatedBalancedSampleWithoutReplacement(
+  k = 2,
+  strata = strata,
+  n = 6
+)
+
+#Check ratio in the samples
+table(strata[s[[1]]])/length(strata[s[[1]]])
+table(strata[s[[2]]])/length(strata[s[[2]]])
+```
+
+
+We can take repeated samples by using the `?resample` function and setting 
+`method = 'balanced_rswor'`.
+
+```{r repeated_balanced_random_sampling_wo_replacement}
+#Balanced sampling without replacement
+obj = resample(
+  x = strata,
+  n = 6,
+  k = 2,
+  method = 'balanced_rswor'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+### Permutation Sampling
+We can take **repeated permutation samples** by using `?repeatedPermutationSample`:
+
+```{r permutation_sampling}
+#Permutation sampling
+repeatedPermutationSample(
+  k = 2,
+  N = 10
+)
+```
+
+
+We can also use the `?resample` function by setting `method = 'permutation'`.
+
+```{r repeated_permutation_sampling}
+#Permutation sampling
+obj = resample(
+  x = 10,
+  k = 2,
+  method = 'permutation'
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj)
+```
+
+### K-fold Sampling
+The idea behind **k-fold resampling** is taken from *k-fold cross-validation*: 
+*k* samples are taken from the population, so that the *i*-th sample is 
+generated by removing the *i*-th fold from the population and merging 
+the remaining *k - 1* folds together.
+
+We can take *k* samples via k-fold sampling by calling `?repeatedRandomKm1Folds`.
+The function accepts two arguments in input:
+
+* `k`: the number of folds
+* `N`: the population size
+
+`?repeatedRandomKm1Folds` returns a list of length *k* where each element is a 
+sample obtained by merging *k-1* folds together.
+
+```{r kfolds_sampling}
+#K-1 folds sampling
+repeatedRandomKm1Folds(
+  N = 10,
+  k = 3
+)
+```
+
+We can take repeated samples by using the `?resample` function and setting
+`method = 'kfolds'`.
+
+```{r repeated_kfolds_sampling}
+#K-folds sampling
+obj = resample(
+  x = 10,
+  k = 3,
+  method = "kfolds"
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(obj)
+```
+
+### Stratified K-fold Sampling
+We can take repeated stratified samples via **stratified k-fold sampling** by 
+calling `?repeatedStratifiedKm1Folds`.
+
+`?repeatedStratifiedKm1Folds` assigns the population to *k* stratified folds and 
+returns *k* samples made of elements from *k-1* folds:
+
+```{r stratified_kfolds_sampling}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds
+i = repeatedStratifiedKm1Folds(
+  strata = strata,
+  k = 3
+)
+
+#Check folds
+i
+
+#Check ratio in the folds
+table(strata[i[[1]]])/length(strata[i[[1]]])
+table(strata[i[[2]]])/length(strata[i[[2]]])
+table(strata[i[[3]]])/length(strata[i[[3]]])
+```
+
+We can take repeated samples by using the `?resample` function and setting
+`method = 'stratified_kfolds'`.
+
+```{r stratified_kfolds_resampling}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Stratified k-folds sampling
+obj = resample(
+  x = strata,
+  k = 3,
+  method = "stratified_kfolds"
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+
+### Balanced K-fold Sampling
+We can take repeated balanced samples via **balanced k-fold sampling** by 
+calling `?repeatedBalancedKm1Folds`, which returns *k* samples made of elements 
+from *k-1* folds.
+
+Internally, it uses `?balancedKFolds` to assign the population to *k* balanced folds:
+
+* If the population is balanced, each element in the population is assigned to one 
+of the k folds so that the percentage of each stratum is preserved in each fold
+* If the population is unbalanced and `undersample = TRUE`, the so-called
+*random undersampling* is adopted, i.e. the proportion of the strata in the
+population is adjusted by removing elements from the majority groups, so that
+each stratum is balanced
+
+
+```{r balanced_km1folds_sampling}
+#Define balanced strata
+strata = c(rep(1,6),rep(2,6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds and take a sample
+i = repeatedBalancedKm1Folds(
+  strata = strata,
+  k = 3
+)
+
+#Check sample
+i
+
+#Check ratio in the sample
+table(strata[i[[1]]])/length(strata[i[[1]]])
+table(strata[i[[2]]])/length(strata[i[[2]]])
+table(strata[i[[3]]])/length(strata[i[[3]]])
+
+#Define unbalanced strata
+strata = c(rep(1,6),rep(2,12))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Assign data to 3 folds and take a sample
+i = repeatedBalancedKm1Folds(
+  strata = strata,
+  k = 3,
+  undersample = T
+)
+#Check folds
+i
+#Check ratio in the folds
+table(strata[i[[1]]])/length(strata[i[[1]]])
+table(strata[i[[2]]])/length(strata[i[[2]]])
+table(strata[i[[3]]])/length(strata[i[[3]]])
+```
+
+
+We can take repeated samples by using the `?resample` function.
+
+```{r balanced_kfolds_resampling}
+#Define strata
+strata = c(rep("a", 6),rep("b", 6))
+
+#Balanced k-folds sampling (balanced population)
+obj = resample(
+  x = strata,
+  k = 3,
+  method = "balanced_kfolds"
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+In case of unbalanced population, we can use the `undersample` argument.
+
+```{r balanced_kfolds_resampling_unbalanced_population}
+#Define strata
+strata = c(rep("a",6),rep("b",8))
+
+#Balanced k-folds sampling (unbalanced population)
+obj = resample(
+  x = strata,
+  k = 3,
+  method = "balanced_kfolds",
+  undersample = T
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(x = obj, strata = strata)
+```
+
+### Leave-p-out Sampling
+**Leave-p-out resampling** is an exhaustive resampling technique, in which samples 
+of size `p` are repeatedly taken from the population until all the possible 
+combinations of `p` elements are considered. 
+These samples are then used as holdout data.
+
+`?repeatedLeavePOut` returns a list of length $\binom{N}{p}$ where 
+each element is a sample obtained by removing the holdout data:
+
+```{r leave_p_out_sampling}
+#Repeatedly sample leaving out p elements each time
+repeatedLeavePOut(N = 5, p = 2)
+```
+
+In order to use the `?resample` function, we need to set `method = 'leave_p_out'`.
+
+```{r leave_p_out_resampling}
+#Leave-p-out sampling
+obj = resample(
+  x = 5,
+  n = 2,
+  method = "leave_p_out"
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(obj)
+```
+
+### Leave-one-out Sampling
+The *leave-one-out* is a particular case of the *leave-p-out*, where `p = 1`.
+Similarly to leave-p-out, **leave-one-out resampling** is an exhaustive 
+resampling technique, in which samples of size `1` are repeatedly taken from the 
+population until each element in the population is considered as the holdout data.
+
+`?repeatedLeaveOneOut` returns a list of length `N` where 
+each element is a sample obtained by removing the holdout data:
+
+
+```{r leave_one_out_sampling}
+#Take one sample leaving out 1 element
+repeatedLeaveOneOut(N = 5)
+```
+
+In order to use the `?resample` function, we need to set `method = 'leave_one_out'`.
+
+```{r leave_one_out_resampling}
+#Leave-one-out sampling
+obj = resample(
+  x = 5,
+  method = "leave_one_out"
+)
+
+#Print
+print(obj)
+
+#Samples
+getSamples(obj)
+
+#Holdout Data
+getHoldOutSamples(obj)
+
+#Plot
+plot(obj)
+```
+
+

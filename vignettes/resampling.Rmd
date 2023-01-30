@@ -1,0 +1,327 @@
+---
+title: "An introduction to `resampling`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+vignette: >
+  %\VignetteIndexEntry{An introduction to `resampling`}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 3
+)
+suppressPackageStartupMessages(library(ComplexHeatmap))
+```
+
+## Introduction
+**resampling** is an helpful package providing an easy way to take repeated 
+samples (i.e. subsets of elements) from a population, here defined as a complete 
+set of subjects of interest.
+
+Resampling can be used for different purposes, including the estimation of the 
+sampling distribution of an estimator, or the validation of predictive models
+in machine learning.
+
+In this article, we show the main functions in `resampling` and a quick example.
+For further information, see:
+
+* [Sampling without replacement](sampling/sampling_wor.html)
+* [Sampling with replacement](sampling/sampling_wr.html)
+* [Resampling without replacement](sampling/resampling_wor.html)
+* [Resampling with replacement](sampling/resampling_wr.html)
+
+## Setup
+Firstly, we need to load `resampling` and other needed R packages:
+
+```{r setup, message = FALSE}
+#resampling
+library(resampling)
+
+#Packages for visualisation
+require(ComplexHeatmap, quietly = TRUE)
+require(grid, quietly = TRUE)
+require(RColorBrewer, quietly = TRUE)
+```
+
+## Seed
+Now we want to set a seed for the random number generation (RNG). In fact, different R sessions have different seeds created from current time and process ID by default, and consequently different simulation results. By fixing a seed we ensure we will be able to reproduce the results of this vignette. We can specify a seed by calling `?set.seed`.
+
+
+```{r set_seed}
+#Set a seed for RNG
+set.seed(
+  #A seed
+  seed = 5381L,                   #a randomly chosen integer value
+  #The kind of RNG to use
+  kind = "Mersenne-Twister",      #we make explicit the current R default value
+  #The kind of Normal generation
+  normal.kind = "Inversion"       #we make explicit the current R default value
+)
+```
+
+<!-- ## Data -->
+<!-- We create now some simulated data to use. For this vignette, we will consider 3 -->
+<!-- populations: -->
+
+<!-- * A population of 100 elements -->
+<!-- * An unbalanced population of 100 elements consisting of 2 subpopulations of 40  -->
+<!-- and 60 elements, respectively -->
+<!-- * A balanced population of 100 elements consisting of 2 subpopulations of 50 -->
+<!-- elements each -->
+
+<!-- ```{r create_data} -->
+<!-- #population size -->
+<!-- N = 100 -->
+<!-- #unbalanced population -->
+<!-- unbalanced = c(rep("A", 40), rep("B", 60)) -->
+<!-- #balanced population -->
+<!-- balanced = c(rep("A", 50), rep("B", 50)) -->
+<!-- ``` -->
+
+
+## Sampling Methods
+A list of currently supported sampling methods is available through the 
+`?listAvailableSamplingMethods` function call, which returns a table with two 
+columns:
+
+* `id`: the id of the sampling method, to be used in the function calls
+* `name`: the name of the sampling method
+
+
+```{r list_sampling_methods}
+#list sampling methods
+sampling.methods = listAvailableSamplingMethods()
+
+#print in table
+knitr::kable(x = sampling.methods)
+```
+
+
+## Sampling Functions
+The name of the sampling functions can be retrieved by calling `?listSamplingFunctionNames`.
+
+```{r list_sampling_functions}
+#list sampling function names
+sampling.function.names = listSamplingFunctionNames()
+
+#print in table
+knitr::kable(x = sampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?balancedSampleWithoutReplacement`.
+
+```{r function_documentation}
+#See documentation
+?balancedSampleWithoutReplacement
+```
+
+From the documentation, we can see that the function accepts three arguments in 
+input:
+
+* `strata`: a vector of stratification variables
+* `n`: the sample size
+* `prob`: an optional vector of probabilities for obtaining the `strata` elements
+
+Let's draw a sample.
+
+```{r example1}
+#Balanced sample without replacement
+balancedSampleWithoutReplacement(
+  strata = c(rep("a", 3),rep("b", 6)),
+  n = 6
+)
+```
+
+
+## Resampling Functions
+The name of the resampling functions can be retrieved by calling `?listResamplingFunctionNames`.
+
+```{r list_resampling_functions}
+#list resampling function names
+resampling.function.names = listResamplingFunctionNames()
+
+#print in table
+knitr::kable(x = resampling.function.names)
+```
+
+
+Each function is documented. To learn more about a specific method it is possible to use
+the `?` operator. For example, let's check the function 
+`?repeatedStratifiedSampleWithoutReplacement`.
+
+```{r function_documentation2}
+#See documentation
+?repeatedStratifiedSampleWithoutReplacement
+```
+
+From the documentation, we can see that this function takes repeated stratified 
+samples without replacement from the population by repeatedly calling the 
+`?stratifiedSampleWithoutReplacement` sampling function. 
+The `?stratifiedSampleWithoutReplacement` help page reports that the function 
+implements the so-called "proportionate allocation", in which the proportion of 
+the strata in the population is maintained in the samples.
+
+`?repeatedStratifiedSampleWithoutReplacement` accepts 4 arguments in input:
+
+* `k`: the number of repeated samples to generate
+* `strata`: a vector of stratification variables
+* `n`: the sample size
+* `prob`: an optional vector of probabilities for obtaining the `strata` elements
+
+Let's draw 3 samples.
+
+```{r example2}
+#Stratified random samples
+repeatedStratifiedSampleWithoutReplacement(
+  k = 3,
+  strata = c(rep("a", 3),rep("b", 6)),
+  n = 6
+)
+```
+
+We can double-check that the proportion of the strata in the population is 
+maintained in the samples:
+
+```{r example3}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+
+#Check ratio
+table(strata)/length(strata)
+
+#Stratified random sample
+i = repeatedStratifiedSampleWithoutReplacement(
+  k = 2,
+  strata = strata,
+  n = 3
+)
+
+#Check indices
+i
+
+#Check ratio
+table(strata[i[[1]]])/length(strata[i[[1]]])
+table(strata[i[[2]]])/length(strata[i[[2]]])
+```
+
+
+## `resample` Function
+Instead of using the different resampling functions, we can use
+`?resample` which provides a unique interface to the various resampling methods. 
+The parameters in input are:
+
+* `x`: either an integer representing the population size, or a vector of stratification variables
+* `n`: either the sample size or the number of elements to holdout
+* `k`: the number of repeated samples to generate. It is used as the number of folds in k-fold sampling
+* `method`: one of the supported sampling techniques. See `?listAvailableSamplingMethods`
+* `prob`: (optional) vector of probability weights for obtaining the elements 
+from the population. If provided, its length must match the population size
+* `undersample`: logical, whether to remove elements from the population in order to try to obtain balanced data
+
+The function returns an object of class `?resampling`, which represents a series 
+of samples repeatedly taken from a population.
+
+## `resampling` S3 Class
+The `resampling` class represents a series of samples repeatedly taken from a 
+population. A `resampling` object is a `list` consisting of 4 elements:
+
+* `method`: the id of the used sampling method
+* `N`: the size of the population from which the samples were taken. Elements in
+the population have index from 1 to N
+* `removed`: (optional) vector of indices of elements removed from the 
+population before taking the samples
+* `samples`: list of samples repeatedly taken from the population. Each
+element of the list is an integer vector containing the indices of the
+elements sampled from the population
+
+Functions to facilitate access to the data stored in a `resampling` object are
+available:
+
+* `?getSamplingMethodId`: returns the sampling method id
+* `?getPopulationSize`: returns the population size
+* `?getRemovedElements`: returns the indices of elements removed from the population
+* `?getNumberOfSamples`: returns the number of taken samples
+* `?getSamples`: returns the list of samples
+* `?getSampleSize`: returns a vector of integer values, the size of each sample
+* `?getHoldOutSample`: returns a list where each item is an integer vector 
+containing the indices of the elements not sampled from the population
+* `?getHoldOutSampleSize`:returns a vector of integer values, the size of each 
+hold-out sample
+
+Two other useful functions are `print` and `plot`:
+
+* `?print.resampling`: print a summary of the `resampling` object
+* `?plot.resampling`: plot the samples taken from the population as an heatmap
+
+## Take Repeated Samples
+Now let's use the `?resample` function to take repeated samples from a population
+of 9 elements made of 2 groups (group `a` and group `b`).
+
+```{r setup_strata}
+#Define strata
+strata = c(rep("a", 3),rep("b", 6))
+```
+
+For this example, we want to use **stratified sampling without replacement**. 
+If we look at the table returned by `?listAvailableSamplingMethods`, we can see 
+that the `id` for stratified sampling without replacement is `stratified_rswor`. 
+We can use this value as the `method` argument in `?resample`: 
+
+```{r random_sampling}
+#Random sampling without replacement
+obj = resample(
+  x = strata,
+  n = 6,
+  k = 2,
+  method = "stratified_rswor"
+)
+```
+
+We can check if the returned object is of class `resampling`:
+
+```{r check_class}
+#Is obj of class `resampling`?
+is.resampling(obj)
+```
+
+Now, we could print a summary:
+
+```{r print_resampling_obj}
+#Print
+print(obj)
+```
+
+We can use `?getSamples` to extract the taken samples from the `resampling` object:
+
+```{r resampling_obj_getsamples}
+#Samples
+getSamples(obj)
+```
+
+The holdout data can be obtained by using `?getHoldOutSamples`:
+
+```{r resampling_obj_getholdoutsamples}
+#Holdout Data
+getHoldOutSamples(obj)
+```
+
+We can also plot our object as an heatmap:
+
+```{r resampling_obj_plot}
+#Plot
+plot(
+  x = obj, 
+  strata = strata
+)
+```
+
+
